@@ -28,8 +28,8 @@ def find_file(full_path):
 
 
 def delete(file_doc):
-    _embeddings.delete_many({"file_id": file_doc._id})
-    _files.delete_one(file_doc._id)
+    _embeddings.delete_many({"file_id": file_doc['_id']})
+    _files.delete_one(file_doc['_id'])
 
 
 def insert(file_id, full_path, chunks, encoded_chunks):

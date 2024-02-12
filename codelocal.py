@@ -89,33 +89,32 @@ def parse_arguments():
 
 def index(args):
     # Recursively walk through the directory to find code files
-    for root, dirs, files in os.walk(args.path_to_code):
+    real_root = os.path.realpath(args.path_to_code)
+    for root, dirs, files in os.walk(real_root):
         for file in files:
-            full_path = os.path.realpath(os.path.join(root, file))
+            full_path = os.path.join(root, file)
 
             language = infer_language_from_extension(full_path)
             if not language or (args.languages and language not in args.languages):
                 continue
 
-            print(full_path)
+            sys.stdout.write(file)
             file_doc = db.find_file(full_path)
             if file_doc:
                 if hexdigest(full_path) == file_doc['hash']:
-                    print('  already indexed, no changes detected')
+                    print(' already indexed, no changes detected')
                     continue
                 else:
-                    print('  file has changed, reindexing')
                     db.delete(file_doc)
-            file_id = file_doc._id if file_doc else None
+            file_id = file_doc['_id'] if file_doc else None
 
             code = open(full_path, 'r', encoding='utf-8').read()
             chunks = combine_chunks(chunkify_code(code, language))
-            start_time = time.time()
+            sys.stdout.write(f' {len(chunks)} chunks')
             encoded_chunks = [encode(chunk) for chunk in chunks]
-            print(f'  encoding {len(chunks)} chunks took {time.time() - start_time:.2f}s')
-            start_time = time.time()
+            sys.stdout.write(f' (encoded)')
             db.insert(file_id, full_path, chunks, encoded_chunks)
-            print(f'  inserting {len(chunks)} chunks took {time.time() - start_time:.2f}s')
+            print(f' (inserted)')
 
 
 def search(args):
