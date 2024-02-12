@@ -8,4 +8,4 @@ def encode(text: str) -> torch.Tensor:
     tokens_ids = model.tokenize([text], max_length=512, mode="<encoder-only>")
     source_ids = torch.tensor(tokens_ids).to(device)
     tokens_embeddings, dpr_embedding = model(source_ids)
-    return dpr_embedding
+    return dpr_embedding[0]
