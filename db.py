@@ -1,4 +1,5 @@
 import os
+import time
 
 from astrapy.db import AstraDB
 
@@ -12,7 +13,6 @@ _db = AstraDB(
     namespace="default_keyspace",
 )
 
-
 _embeddings = None
 _files = None
 def connect(collection_name):
@@ -21,10 +21,9 @@ def connect(collection_name):
     _files = _db.create_collection(collection_name + "_files")
 
 
-def find_file(full_path):
+def load_hashes():
     """Return the document associated with the given path, or None if not found."""
-    result = _files.find({"path": full_path})
-    return result['data']['documents'][0] if result['data']['documents'] else None
+    return list(_files.paginated_find())
 
 
 def delete(file_doc):

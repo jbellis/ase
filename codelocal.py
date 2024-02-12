@@ -1,13 +1,11 @@
 import argparse
 import os
 import sys
-import time
 from itertools import groupby
 from operator import itemgetter
 
 import db
 from chunking import chunkify_code, combine_chunks
-from encoder import encode
 from util import hexdigest
 
 LANGUAGES_BY_EXTENSION = {
@@ -88,6 +86,8 @@ def parse_arguments():
 
 
 def index(args):
+    known_files_by_path = {file_doc['path']: file_doc
+                           for file_doc in db.load_hashes()}
     # Recursively walk through the directory to find code files
     real_root = os.path.realpath(args.path_to_code)
     for root, dirs, files in os.walk(real_root):
@@ -99,7 +99,7 @@ def index(args):
                 continue
 
             sys.stdout.write(file)
-            file_doc = db.find_file(full_path)
+            file_doc = known_files_by_path.get(full_path)
             if file_doc:
                 if hexdigest(full_path) == file_doc['hash']:
                     print(' already indexed, no changes detected')
@@ -108,6 +108,7 @@ def index(args):
                     db.delete(file_doc)
             file_id = file_doc['_id'] if file_doc else None
 
+            from encoder import encode
             code = open(full_path, 'r', encoding='utf-8').read()
             chunks = combine_chunks(chunkify_code(code, language))
             sys.stdout.write(f' {len(chunks)} chunks')
