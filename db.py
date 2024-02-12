@@ -1,7 +1,6 @@
 import os
-import time
 
-from astrapy.db import AstraDB
+from astrapy.db import AstraDB, AstraDBCollection
 
 from util import hexdigest
 
@@ -15,10 +14,23 @@ _db = AstraDB(
 
 _embeddings = None
 _files = None
+
+
 def connect(collection_name):
     global _embeddings, _files
-    _embeddings = _db.create_collection(collection_name + "_embeddings", dimension=768, metric="cosine")
-    _files = _db.create_collection(collection_name + "_files")
+    all_collections = set(_db.get_collections()['status']['collections'])
+
+    embeddings_collection_name = collection_name + "_embeddings"
+    if embeddings_collection_name in all_collections:
+        _embeddings = AstraDBCollection(embeddings_collection_name, _db)
+    else:
+        _embeddings = _db.create_collection(embeddings_collection_name, dimension=768, metric="cosine")
+
+    files_collection_name = collection_name + "_files"
+    if files_collection_name in all_collections:
+        _files = AstraDBCollection(files_collection_name, _db)
+    else:
+        _files = _db.create_collection(files_collection_name)
 
 
 def load_hashes():
