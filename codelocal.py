@@ -8,6 +8,7 @@ from operator import itemgetter
 import db
 from chunking import chunkify_code, combine_chunks
 from encoder import encode
+from util import hexdigest
 
 LANGUAGES_BY_EXTENSION = {
     '.py': 'Python',
@@ -28,28 +29,30 @@ def infer_language_from_extension(filename: str) -> str:
 
 def parse_arguments():
     """
-    Parses command line arguments to support 'insert' and 'search' commands.
+    Parses command line arguments to support 'index' and 'search' commands.
     Expected forms are:
-    - python vsearch.py insert <path-to-code> [languages]
-    - python vsearch.py search <path-to-code> <query>
+    - python vsearch.py index <path-to-code> [--collection collection_name] [languages]
+    - python vsearch.py search <path-to-code> [--collection collection_name] <query> [--files-only]
 
     Returns:
         args (Namespace): An argparse.Namespace object containing the arguments
-        command (str): The command specified ('insert' or 'search').
+        command (str): The command specified ('index' or 'search').
     """
     # Create the main parser
-    parser = argparse.ArgumentParser(description='Process "insert" or "search" commands for code files.')
+    parser = argparse.ArgumentParser(description='Process "index" or "search" commands for code files.')
     subparsers = parser.add_subparsers(dest='command', help='Commands')
 
-    # Create the parser for the "insert" command
-    parser_insert = subparsers.add_parser('insert', help='Insert code files into the database.')
-    parser_insert.add_argument('path_to_code', type=str, help='Path to the directory where code files are located.')
-    parser_insert.add_argument('languages', nargs='*',
+    # Create the parser for the "index" command
+    parser_index = subparsers.add_parser('index', help='Index code files into the database.')
+    parser_index.add_argument('path_to_code', type=str, help='Path to the directory where code files are located.')
+    parser_index.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
+    parser_index.add_argument('languages', nargs='*',
                                help='Optional list of programming languages to filter the search.')
 
     # Create the parser for the "search" command
     parser_search = subparsers.add_parser('search', help='Search for code files in the database.')
     parser_search.add_argument('path_to_code', type=str, help='Path to the directory where code files are located.')
+    parser_search.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
     parser_search.add_argument('query', type=str, help='Search query.')
     parser_search.add_argument('--files-only', action='store_true', help='Limit search to files only.')
 
@@ -63,6 +66,9 @@ def parse_arguments():
     if not os.path.isdir(args.path_to_code):
         print(f"Error: The path {args.path_to_code} is not a directory.")
         sys.exit(1)
+    # collection name defaults to directory name
+    if not args.collection:
+        args.collection = os.path.basename(args.path_to_code)
 
     if args.command == 'index':
         # Validate languages
@@ -83,23 +89,32 @@ def parse_arguments():
 
 def index(args):
     # Recursively walk through the directory to find code files
-    languages_recognized = set()
     for root, dirs, files in os.walk(args.path_to_code):
         for file in files:
-            full_path = os.path.join(root, file)
+            full_path = os.path.realpath(os.path.join(root, file))
+
             language = infer_language_from_extension(full_path)
             if not language or (args.languages and language not in args.languages):
                 continue
-            languages_recognized.add(language)
+
             print(full_path)
-            with open(full_path, 'r', encoding='utf-8') as file1:
-                code = file1.read()
+            file_doc = db.find_file(full_path)
+            if file_doc:
+                if hexdigest(full_path) == file_doc['hash']:
+                    print('  already indexed, no changes detected')
+                    continue
+                else:
+                    print('  file has changed, reindexing')
+                    db.delete(file_doc)
+            file_id = file_doc._id if file_doc else None
+
+            code = open(full_path, 'r', encoding='utf-8').read()
             chunks = combine_chunks(chunkify_code(code, language))
             start_time = time.time()
             encoded_chunks = [encode(chunk) for chunk in chunks]
             print(f'  encoding {len(chunks)} chunks took {time.time() - start_time:.2f}s')
             start_time = time.time()
-            db.insert_embeddings(full_path, chunks, encoded_chunks)
+            db.insert(file_id, full_path, chunks, encoded_chunks)
             print(f'  inserting {len(chunks)} chunks took {time.time() - start_time:.2f}s')
 
 
@@ -118,6 +133,7 @@ def search(args):
 
 if __name__ == '__main__':
     args = parse_arguments()
+    db.connect(args.collection)
     if args.command == 'index':
         index(args)
     else:
