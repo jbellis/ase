@@ -2,11 +2,12 @@ import argparse
 import os
 import sys
 import time
+from itertools import groupby
+from operator import itemgetter
 
 import db
 from chunking import chunkify_code, combine_chunks
 from encoder import encode
-
 
 LANGUAGES_BY_EXTENSION = {
     '.py': 'Python',
@@ -50,6 +51,7 @@ def parse_arguments():
     parser_search = subparsers.add_parser('search', help='Search for code files in the database.')
     parser_search.add_argument('path_to_code', type=str, help='Path to the directory where code files are located.')
     parser_search.add_argument('query', type=str, help='Search query.')
+    parser_search.add_argument('--files-only', action='store_true', help='Limit search to files only.')
 
     # Parse the command line arguments
     args = parser.parse_args()
@@ -103,9 +105,13 @@ def index(args):
 
 def search(args):
     encoded_query = encode(args.query)
-    for result in db.search(encoded_query):
-        print(f"# {result['path']} #")
-        print(result['chunk'])
+    result_sorted = sorted(db.search(encoded_query), key=itemgetter('path'))
+    results_by_path = {key: [item['chunk'] for item in group]
+                       for key, group in groupby(result_sorted, key=itemgetter('path'))}
+    for path, chunks in results_by_path.items():
+        print(f"# {path} #")
+        if not args.files_only:
+            print('\n...\n'.join(chunks))
 
 
 if __name__ == '__main__':
