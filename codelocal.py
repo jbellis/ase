@@ -109,8 +109,10 @@ def search(args):
     results_by_path = {key: [item['chunk'] for item in group]
                        for key, group in groupby(result_sorted, key=itemgetter('path'))}
     for path, chunks in results_by_path.items():
-        print(f"# {path} #")
-        if not args.files_only:
+        if args.files_only:
+            print(path)
+        else:
+            print(f"# {path} #")
             print('\n...\n'.join(chunks))
 
 

@@ -1,9 +1,9 @@
 Quickstart:
 
-  vsearch index path-to-data
+  codelocal index path-to-data
 
-  vsearch search path-to-data "query string"
+  codelocal search path-to-data "query string"
 
-By default, vsearch gives you the chunks that matched your query.  Use grep-inspired options to change this to give filesnames:
+By default, codelocal gives you the chunks that matched your query.  Use --files-only to give just the filenames:
 
-  vsearch search -l path-to-data "query string"
+  codelocal search path-to-data "query string" --files-only
