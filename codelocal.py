@@ -88,8 +88,9 @@ def parse_arguments():
 def index(args):
     known_files_by_path = {file_doc['path']: file_doc
                            for file_doc in db.load_hashes()}
-    # Recursively walk through the directory to find code files
     real_root = os.path.realpath(args.path_to_code)
+    n_unchanged = 0
+    # Recursively walk through the directory to find code files
     for root, dirs, files in os.walk(real_root):
         for file in files:
             full_path = os.path.join(root, file)
@@ -98,17 +99,17 @@ def index(args):
             if not language or (args.languages and language not in args.languages):
                 continue
 
-            sys.stdout.write(file)
             file_doc = known_files_by_path.get(full_path)
             if file_doc:
                 if hexdigest(full_path) == file_doc['hash']:
-                    print(' already indexed, no changes detected')
+                    n_unchanged += 1
                     continue
                 else:
                     db.delete(file_doc)
             file_id = file_doc['_id'] if file_doc else None
 
             from encoder import encode
+            sys.stdout.write(file)
             code = open(full_path, 'r', encoding='utf-8').read()
             chunks = combine_chunks(chunkify_code(code, language))
             sys.stdout.write(f' {len(chunks)} chunks')
@@ -116,6 +117,8 @@ def index(args):
             sys.stdout.write(f' (encoded)')
             db.insert(file_id, full_path, chunks, encoded_chunks)
             print(f' (inserted)')
+    if n_unchanged:
+        print(f"{n_unchanged} files unchanged")
 
 
 def search(args):
