@@ -29,14 +29,17 @@ def infer_language_from_extension(filename: str) -> str:
 
 def parse_arguments():
     """
-    Parses command line arguments to support 'index' and 'search' commands.
-    Expected forms are:
-    - python vsearch.py index <path-to-code> [--collection collection_name] [languages]
-    - python vsearch.py search <path-to-code> [--collection collection_name] <query> [--files-only]
+    Parses command line arguments to support 'index' and 'search' commands with enhanced flexibility for specifying programming languages as an optional argument in the 'index' command. Expected forms are:
+    - python codelocal.py index <path-to-code>
+      [--collection collection_name]
+      [--languages [language1 language2 ...]]
+    - python codelocal.py search <path-to-code> <query>
+      [--collection collection_name]
+      [--files]
+      [--limit number_of_results]
 
     Returns:
-        args (Namespace): An argparse.Namespace object containing the arguments
-        command (str): The command specified ('index' or 'search').
+        An argparse.Namespace object containing the parsed arguments.
     """
     # Create the main parser
     parser = argparse.ArgumentParser(description='Process "index" or "search" commands for code files.')
@@ -46,15 +49,17 @@ def parse_arguments():
     parser_index = subparsers.add_parser('index', help='Index code files into the database.')
     parser_index.add_argument('path_to_code', type=str, help='Path to the directory where code files are located.')
     parser_index.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
-    parser_index.add_argument('languages', nargs='*',
-                               help='Optional list of programming languages to filter the search.')
+    # Adjusted parser_index to make languages an optional argument
+    parser_index.add_argument('--languages', nargs='*',
+                              help='Optional list of programming languages to filter the search.')
 
     # Create the parser for the "search" command
     parser_search = subparsers.add_parser('search', help='Search for code files in the database.')
     parser_search.add_argument('path_to_code', type=str, help='Path to the directory where code files are located.')
-    parser_search.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
     parser_search.add_argument('query', type=str, help='Search query.')
-    parser_search.add_argument('--files-only', action='store_true', help='Limit search to files only.')
+    parser_search.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
+    parser_search.add_argument('--files', action='store_true', help='Output entire file contents instead of just matching chunks.')
+    parser_search.add_argument('--limit', type=int, help='Number of search results to include.')
 
     # Parse the command line arguments
     args = parser.parse_args()
@@ -134,11 +139,13 @@ def search(args):
     result_sorted = sorted(db.search(encoded_query), key=itemgetter('path'))
     results_by_path = {key: [item['chunk'] for item in group]
                        for key, group in groupby(result_sorted, key=itemgetter('path'))}
-    for path, chunks in results_by_path.items():
-        if args.files_only:
-            print(path)
-        else:
-            print(f"# {path} #")
+    if args.files:
+        for full_path in results_by_path:
+            print('# {full_path} #')
+            print(open(full_path, 'r', encoding='utf-8').read())
+    else:
+        for full_path, chunks in results_by_path.items():
+            print(f"# {full_path} #")
             print('\n...\n'.join(chunks))
 
 
