@@ -18,6 +18,7 @@ _files = None
 
 def connect(collection_name):
     global _embeddings, _files
+    print('Connecting to database')
     all_collections = set(_db.get_collections()['status']['collections'])
 
     embeddings_collection_name = collection_name + "_embeddings"
