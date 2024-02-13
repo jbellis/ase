@@ -15,8 +15,9 @@ LANGUAGES_BY_EXTENSION = {
     '.js': 'JavaScript',
     '.java': 'Java',
     '.cpp': 'C++',
-    '.chh': 'C++',
+    '.hpp': 'C++',
     '.c': 'C',
+    '.h': 'C',
     '.rs': 'Rust',
 }
 def infer_language_from_extension(filename: str) -> str:
@@ -71,9 +72,14 @@ def parse_arguments():
     if not os.path.isdir(args.path_to_code):
         print(f"Error: The path {args.path_to_code} is not a directory.")
         sys.exit(1)
+    # strip off trailing slash, if present -- it confuses os.path.basename
+    args.path_to_code = args.path_to_code.rstrip('/')
     # collection name defaults to directory name
     if not args.collection:
-        args.collection = os.path.basename(args.path_to_code)
+        # Remove non-alphanumeric characters from the directory name since we're going to use this
+        # as a database table name
+        basename = os.path.basename(args.path_to_code)
+        args.collection = ''.join(c for c in basename if c.isalnum())
 
     if args.command == 'index':
         # Validate languages
@@ -117,7 +123,7 @@ def index(args):
                 n_unchanged += 1
                 continue
             else:
-                db.delete(file_doc)
+                db.delete(file_doc['_id'])
         paths_to_index.append(full_path)
 
     # encode and store the interesting files
@@ -136,22 +142,23 @@ def index(args):
 def search(args):
     from encoder import encode
     encoded_query = encode(args.query)
-    result_sorted = sorted(db.search(encoded_query), key=itemgetter('path'))
-    results_by_path = {key: [item['chunk'] for item in group]
-                       for key, group in groupby(result_sorted, key=itemgetter('path'))}
+    result_sorted = sorted(db.search(encoded_query), key=itemgetter('file_id'))
+    results_by_file = {key: [item['chunk'] for item in group]
+                       for key, group in groupby(result_sorted, key=itemgetter('file_id'))}
     if args.files:
-        for full_path in results_by_path:
+        for file_id in results_by_file:
             print('# {full_path} #')
-            print(open(full_path, 'r', encoding='utf-8').read())
+            print(open(file_id, 'r', encoding='utf-8').read())
     else:
-        for full_path, chunks in results_by_path.items():
+        for file_id, chunks in results_by_file.items():
+            full_path = db.file_by_id(file_id)['path']
             print(f"# {full_path} #")
             print('\n...\n'.join(chunks))
 
 
 if __name__ == '__main__':
     args = parse_arguments()
-    db.connect(args.collection)
+    db.init(args.collection)
     if args.command == 'index':
         index(args)
     else:

@@ -19,11 +19,7 @@ def chunkify_code(code: str, language: str) -> List[str]:
     return chunks
 
 
-# CHUNK_SIZE_LIMIT = 1000
-# blows up with
-# astrapy.api.APIRequestError: {"errors":[{"message":"Document size limitation violated: indexed String value length (9974 bytes) exceeds maximum allowed (8000 bytes)","errorCode":"SHRED_DOC_LIMIT_VIOLATION"}]}
-# not sure how 1k turns into 9k+ but let's try 800
-CHUNK_SIZE_LIMIT = 800
+CHUNK_SIZE_LIMIT = 1000
 def combine_chunks(chunks: List[str]) -> List[str]:
     """
     Combines consecutive chunks up to our size limit.
