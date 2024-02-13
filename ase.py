@@ -143,14 +143,15 @@ def search(args):
     from encoder import encode
     encoded_query = encode(args.query)
     result_sorted = sorted(db.search(encoded_query), key=itemgetter('file_id'))
-    results_by_file = {key: [item['chunk'] for item in group]
-                       for key, group in groupby(result_sorted, key=itemgetter('file_id'))}
+    results_by_file = sorted(((key, [item['chunk'] for item in group])
+                             for key, group in groupby(result_sorted, key=itemgetter('file_id'))),
+                             key=lambda kv: -len(kv[1]))
     if args.files:
-        for file_id in results_by_file:
+        for file_id, _ in results_by_file:
             print('# {full_path} #')
             print(open(file_id, 'r', encoding='utf-8').read())
     else:
-        for file_id, chunks in results_by_file.items():
+        for file_id, chunks in results_by_file:
             full_path = db.file_by_id(file_id)['path']
             print(f"# {full_path} #")
             print('\n...\n'.join(chunks))
