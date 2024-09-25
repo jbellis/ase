@@ -212,12 +212,17 @@ def debug_chunks(args):
         return
 
     file_id = file_doc['_id']
-    chunks = db.file_by_id(file_id)['chunks']
+    print(f"File {args.file} present in the index with ID: {file_id}")
+    chunks = db.get_chunks_by_file_id(file_id)
     
+    if not chunks:
+        print(f"No chunks found for file: {args.file}")
+        return
+
     print(f"Chunks for file: {args.file}")
     for i, chunk in enumerate(chunks, 1):
         print(f"\nChunk {i}:")
-        print(chunk)
+        print(chunk['chunk'])
 
 
 if __name__ == '__main__':

@@ -77,3 +77,7 @@ def search(query_embedding, limit):
         limit=limit,
         projection={"file_id": 1, "chunk": 1}
     )
+
+def get_chunks_by_file_id(file_id):
+    """Return all chunks associated with the given file_id."""
+    return list(_embeddings.find({"file_id": file_id}, projection={"chunk": 1, "_id": 0}))
