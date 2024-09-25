@@ -143,17 +143,22 @@ def index(args):
         return
     # encode and store the interesting files
     print(f'Indexing {len(paths_to_index)} files ({n_unchanged} unchanged)')
-    for full_path in tqdm(paths_to_index, desc="Indexing files", unit="file"):
-        print(full_path)
-        file_doc = known_files_by_path.get(full_path)
-        file_id = file_doc['_id'] if file_doc else None
+    with tqdm(paths_to_index, 
+              bar_format='{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt}',
+              unit="file") as pbar:
+        for full_path in pbar:
+            file_doc = known_files_by_path.get(full_path)
+            file_id = file_doc['_id'] if file_doc else None
 
-        from encoder import encode
-        contents = open(full_path, 'r', encoding='utf-8').read()
-        language = infer_language(full_path)
-        chunks = chunkify_code(contents, language)
-        encoded_chunks = encode(chunks)
-        db.insert(file_id, full_path, chunks, encoded_chunks)
+            from encoder import encode
+            contents = open(full_path, 'r', encoding='utf-8').read()
+            language = infer_language(full_path)
+            chunks = chunkify_code(contents, language)
+            encoded_chunks = encode(chunks)
+            db.insert(file_id, full_path, chunks, encoded_chunks)
+            
+            # Update the description with the current filename
+            pbar.set_description(f"Indexing {os.path.basename(full_path)}")
 
 
 from collections import defaultdict

@@ -34,7 +34,7 @@ class RateLimiter:
             _, tokens = self.requests.popleft()
             self.tokens = min(self.max_tokens, self.tokens + tokens)
 
-rate_limiter = RateLimiter(980, 60) # 1000 tokens per minute with a buffer
+rate_limiter = RateLimiter(960, 60) # 1000 tokens per minute with a buffer
 
 def encode(inputs: list[str]) -> list[list[float]]:
     rate_limiter.wait(len(inputs))
