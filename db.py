@@ -22,8 +22,8 @@ def init(collection_name):
     embeddings_collection_name = collection_name + "_embeddings"
     files_collection_name = collection_name + "_files"
     
-    collections = _db.list_collections()
-    
+    collections = set(c.name for c in _db.list_collections())
+
     if embeddings_collection_name in collections:
         _embeddings = _db[embeddings_collection_name]
     else:
