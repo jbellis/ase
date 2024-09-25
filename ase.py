@@ -135,7 +135,7 @@ def index(args):
         from encoder import encode
         contents = open(full_path, 'r', encoding='utf-8').read()
         chunks = combine_chunks(chunkify_code(contents, language))
-        encoded_chunks = [encode(chunk) for chunk in chunks]
+        encoded_chunks = encode(chunks)
         db.insert(file_id, full_path, chunks, encoded_chunks)
 
 

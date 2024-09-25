@@ -1,4 +1,3 @@
-torch
-transformers
 astrapy
 tqdm
+google-generativeai

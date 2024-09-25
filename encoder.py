@@ -1,11 +1,13 @@
-import torch
-from unixcoder import UniXcoder
+import os
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = UniXcoder("microsoft/unixcoder-base")
+import google.generativeai as gemini
 
-def encode(text: str) -> torch.Tensor:
-    tokens_ids = model.tokenize([text], max_length=512, mode="<encoder-only>")
-    source_ids = torch.tensor(tokens_ids).to(device)
-    tokens_embeddings, dpr_embedding = model(source_ids)
-    return dpr_embedding[0]
+gemini_key = os.environ["GEMINI_KEY"]
+if not gemini_key:
+    raise Exception('GEMINI_KEY environment variable not set')
+gemini.configure(api_key=gemini_key)
+
+def encode(inputs: list[str]) -> list[list[float]]:
+    model = "models/text-embedding-004"
+    result = gemini.embed_content(model=model, content=inputs)
+    return result['embedding']
