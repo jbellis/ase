@@ -1,14 +1,13 @@
 import argparse
 import os
 import sys
-from itertools import groupby
-from operator import itemgetter
 
 from tqdm import tqdm
 
 import db
 from chunking import chunkify_code
 from util import hexdigest, get_indexable_files, infer_language, validate_language
+
 
 def parse_arguments():
     """
@@ -113,19 +112,26 @@ def index(args):
         db.insert(file_id, full_path, chunks, encoded_chunks)
 
 
+from collections import defaultdict
+
 def search(args):
     from encoder import encode
     encoded_query = encode(args.query)
     results = db.search(encoded_query, args.max_count)
     
     if args.files_with_matches:
-        result_sorted = sorted(db.search(encoded_query), key=itemgetter('file_id'))
-        results_by_file = sorted(((key, [item['chunk'] for item in group])
-                                  for key, group in groupby(result_sorted, key=itemgetter('file_id'))),
-                                 key=lambda kv: -len(kv[1]))
-        for file_id, _ in results_by_file:
+        # Group results by file_id
+        results_by_file = defaultdict(int)
+        for result in results:
+            results_by_file[result['file_id']] += 1
+        
+        # Sort files by match count in descending order
+        sorted_files = sorted(results_by_file.items(), key=lambda x: x[1], reverse=True)
+        
+        # Print file paths
+        for file_id, count in sorted_files:
             full_path = db.file_by_id(file_id)['path']
-            print(full_path)
+            print(f"{full_path}")
     else:
         for result in results:
             file_id = result['file_id']
