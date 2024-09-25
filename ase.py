@@ -7,26 +7,8 @@ from operator import itemgetter
 from tqdm import tqdm
 
 import db
-from chunking import chunkify_code, combine_chunks
-from util import hexdigest
-
-LANGUAGES_BY_EXTENSION = {
-    '.py': 'Python',
-    '.js': 'JavaScript',
-    '.java': 'Java',
-    '.cpp': 'C++',
-    '.hpp': 'C++',
-    '.c': 'C',
-    '.h': 'C',
-    '.rs': 'Rust',
-}
-def infer_language_from_extension(filename: str) -> str:
-    """
-    Infers programming language from the file extension.
-    """
-    _, ext = os.path.splitext(filename)
-    return LANGUAGES_BY_EXTENSION.get(ext.lower())
-
+from chunking import chunkify_code
+from util import hexdigest, get_indexable_files, infer_language, validate_language
 
 def parse_arguments():
     """
@@ -84,11 +66,7 @@ def parse_arguments():
     if args.command == 'index':
         # Validate languages
         if args.languages:
-            for language in args.languages:
-                if language not in LANGUAGES_BY_EXTENSION.values():
-                    print(f"Error: Unrecognized language {language}")
-                    print(f"Recognized languages: {', '.join(LANGUAGES_BY_EXTENSION.values())}")
-                    sys.exit(1)
+            validate_language(language)
     else:
         assert args.command == 'search'
         if not args.query:
@@ -101,22 +79,14 @@ def parse_arguments():
 def index(args):
     known_files_by_path = {file_doc['path']: file_doc
                            for file_doc in db.load_hashes()}
-    real_root = os.path.realpath(args.path_to_code)
     n_unchanged = 0
 
     print('Scanning for files to index')
-    # Collect all files in the directory into a flat list
-    all_paths = []
-    for root, dirs, files in os.walk(real_root):
-        for file in files:
-            full_path = os.path.join(root, file)
-            all_paths.append(full_path)
+    all_paths = get_indexable_files(args.path_to_code, args.languages)
+    
     # Prune list to changed or new files
     paths_to_index = []
-    for full_path in tqdm(all_paths):
-        language = infer_language_from_extension(full_path)
-        if not language or (args.languages and language not in args.languages):
-            continue
+    for full_path in tqdm(all_paths, desc="Checking file changes", unit="file"):
         file_doc = known_files_by_path.get(full_path)
         if file_doc:
             if hexdigest(full_path) == file_doc['hash']:
@@ -128,13 +98,14 @@ def index(args):
 
     # encode and store the interesting files
     print(f'Indexing {len(paths_to_index)} files ({n_unchanged} unchanged)')
-    for full_path in tqdm(paths_to_index):
+    for full_path in tqdm(paths_to_index, desc="Indexing files", unit="file"):
         file_doc = known_files_by_path.get(full_path)
         file_id = file_doc['_id'] if file_doc else None
 
         from encoder import encode
         contents = open(full_path, 'r', encoding='utf-8').read()
-        chunks = combine_chunks(chunkify_code(contents, language))
+        language = infer_language(full_path)
+        chunks = chunkify_code(contents, language)
         encoded_chunks = encode(chunks)
         db.insert(file_id, full_path, chunks, encoded_chunks)
 
