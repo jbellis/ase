@@ -27,7 +27,10 @@ def init(collection_name):
     if embeddings_collection_name in collections:
         _embeddings = _db[embeddings_collection_name]
     else:
-        _embeddings = _db.create_collection(embeddings_collection_name, dimension=768, metric=VectorMetric.COSINE)
+        _embeddings = _db.create_collection(embeddings_collection_name,
+                                            indexing={'deny': ['chunk']},
+                                            dimension=768,
+                                            metric=VectorMetric.COSINE)
 
     if files_collection_name in collections:
         _files = _db[files_collection_name]
