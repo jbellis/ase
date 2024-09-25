@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+from pathlib import Path
 
 from tqdm import tqdm
 
@@ -8,6 +9,19 @@ import db
 from chunking import chunkify_code
 from util import hexdigest, get_indexable_files, infer_language, validate_language
 
+
+def relativize(full_path, base_path):
+    """
+    Convert a full path to a path relative to the base_path.
+    
+    Args:
+        full_path (str): The full path to convert.
+        base_path (str): The base path to make the full_path relative to.
+    
+    Returns:
+        str: The relative path.
+    """
+    return str(Path(full_path).relative_to(base_path))
 
 def parse_arguments():
     """
@@ -131,12 +145,12 @@ def search(args):
         # Print file paths
         for file_id, count in sorted_files:
             full_path = db.file_by_id(file_id)['path']
-            print(f"{full_path}")
+            print(f"{relativize(full_path, args.path_to_code)}")
     else:
         for result in results:
             file_id = result['file_id']
             full_path = db.file_by_id(file_id)['path']
-            print(f"# {full_path} #")
+            print(f"# {relativize(full_path, args.path_to_code)} #")
             print(result['chunk'])
             print("\n" + "-" * 80 + "\n")  # Separator between chunks
 
