@@ -1,22 +1,14 @@
-import os
-from typing import List, Tuple
-from tree_sitter import Language, Parser
-from tree_sitter_languages import get_language, get_parser
-
-def get_tree_sitter_parser(language: str) -> Tuple[Language, Parser]:
-    """
-    Get the appropriate tree-sitter language and parser for the given language.
-    """
-    lang = get_language(language)
-    parser = get_parser(language)
-    return lang, parser
+from typing import List
+import warnings
+warnings.simplefilter("ignore", category=FutureWarning)
+from tree_sitter_languages import get_parser
 
 
 def chunkify_code(code: str, language: str) -> List[str]:
     """
     Splits code into semantically meaningful chunks using tree-sitter.
     """
-    lang, parser = get_tree_sitter_parser(language)
+    parser = get_parser(language)
     tree = parser.parse(bytes(code, "utf8"))
 
     chunks = []
