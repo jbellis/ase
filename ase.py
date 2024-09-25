@@ -144,6 +144,7 @@ def index(args):
     # encode and store the interesting files
     print(f'Indexing {len(paths_to_index)} files ({n_unchanged} unchanged)')
     for full_path in tqdm(paths_to_index, desc="Indexing files", unit="file"):
+        print(full_path)
         file_doc = known_files_by_path.get(full_path)
         file_id = file_doc['_id'] if file_doc else None
 
