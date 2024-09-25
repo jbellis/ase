@@ -1,34 +1,43 @@
 import os
-import requests
-from ratelimit import limits, sleep_and_retry
+import time
+from collections import deque
 
-JINA_API_KEY = os.environ.get("JINA_API_KEY")
-if not JINA_API_KEY:
-    raise Exception('JINA_API_KEY environment variable not set')
+import google.generativeai as gemini
 
-@sleep_and_retry
-@limits(calls=50, period=60)
+gemini_key = os.environ["GEMINI_KEY"]
+if not gemini_key:
+    raise Exception('GEMINI_KEY environment variable not set')
+gemini.configure(api_key=gemini_key)
+
+class RateLimiter:
+    def __init__(self, max_tokens, time_window):
+        self.max_tokens = max_tokens
+        self.time_window = time_window
+        self.tokens = max_tokens
+        self.last_refill = time.time()
+        self.requests = deque()
+
+    def wait(self, tokens):
+        self._refill()
+        while self.tokens < tokens:
+            time.sleep(0.1)
+            self._refill()
+        self.tokens -= tokens
+        self.requests.append((time.time(), tokens))
+
+    def _refill(self):
+        now = time.time()
+        elapsed = now - self.last_refill
+        self.tokens = min(self.max_tokens, self.tokens + elapsed * (self.max_tokens / self.time_window))
+        self.last_refill = now
+        while self.requests and now - self.requests[0][0] > self.time_window:
+            _, tokens = self.requests.popleft()
+            self.tokens = min(self.max_tokens, self.tokens + tokens)
+
+rate_limiter = RateLimiter(980, 60) # 1000 tokens per minute with a buffer
+
 def encode(inputs: list[str]) -> list[list[float]]:
-    limited_inputs = [text[:30000] for text in inputs] # 8k tokens * 0.9 words/token * 4.7 bytes/word, conservatively
-    url = 'https://api.jina.ai/v1/embeddings'
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {JINA_API_KEY}"
-    }
-    data = {
-        "model": "jina-embeddings-v2-base-code",
-        "normalized": True,
-        "embedding_type": "float",
-        "input": limited_inputs
-    }
-
-    # write the request to a file for debugging
-    with open('/tmp/request.json', 'w') as f:
-        import json
-        f.write(json.dumps(data, indent=2))
-
-    response = requests.post(url, headers=headers, json=data)
-    response.raise_for_status()  # Raise an exception for HTTP errors
-
-    result = response.json()
-    return [item['embedding'] for item in result['data']]
+    rate_limiter.wait(len(inputs))
+    model = "models/text-embedding-004"
+    result = gemini.embed_content(model=model, content=inputs)
+    return result['embedding']
