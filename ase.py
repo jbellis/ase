@@ -72,6 +72,13 @@ def parse_arguments():
                               help='Path to the directory where code files are located. Defaults to current working directory.')
     parser_prune.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
 
+    # Create the parser for the "debug-chunks" command
+    parser_debug_chunks = subparsers.add_parser('debug-chunks', help='List the DB chunks associated with a given file.')
+    parser_debug_chunks.add_argument('file', type=str, help='File to list chunks for.')
+    parser_debug_chunks.add_argument('path_to_code', type=str, nargs='?', default=os.getcwd(),
+                                     help='Path to the directory where code files are located. Defaults to current working directory.')
+    parser_debug_chunks.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
+
     # Parse the command line arguments
     args = parser.parse_args()
 
@@ -192,6 +199,27 @@ def prune(args):
             print(f"File {file_path} not found in the index.")
 
 
+def debug_chunks(args):
+    full_path = os.path.abspath(os.path.join(args.path_to_code, args.file))
+    file_doc = None
+    for doc in db.hashes_cursor():
+        if doc['path'] == full_path:
+            file_doc = doc
+            break
+    
+    if file_doc is None:
+        print(f"File {args.file} not found in the index.")
+        return
+
+    file_id = file_doc['_id']
+    chunks = db.file_by_id(file_id)['chunks']
+    
+    print(f"Chunks for file: {args.file}")
+    for i, chunk in enumerate(chunks, 1):
+        print(f"\nChunk {i}:")
+        print(chunk)
+
+
 if __name__ == '__main__':
     args = parse_arguments()
     db.init(args.collection)
@@ -201,6 +229,8 @@ if __name__ == '__main__':
         search(args)
     elif args.command == 'prune':
         prune(args)
+    elif args.command == 'debug-chunks':
+        debug_chunks(args)
     else:
         assert args.command == 'debug-index'
         debug_index(args)
