@@ -30,7 +30,8 @@ def parse_arguments():
 
     # Create the parser for the "index" command
     parser_index = subparsers.add_parser('index', help='Index code files into the database.')
-    parser_index.add_argument('path_to_code', type=str, help='Path to the directory where code files are located.')
+    parser_index.add_argument('path_to_code', type=str, nargs='?', default=os.getcwd(),
+                              help='Path to the directory where code files are located. Defaults to current working directory.')
     parser_index.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
     # Adjusted parser_index to make languages an optional argument
     parser_index.add_argument('--languages', nargs='*',
@@ -38,7 +39,8 @@ def parse_arguments():
 
     # Create the parser for the "search" command
     parser_search = subparsers.add_parser('search', help='Search for code files in the database.')
-    parser_search.add_argument('path_to_code', type=str, help='Path to the directory where code files are located.')
+    parser_search.add_argument('path_to_code', type=str, nargs='?', default=os.getcwd(),
+                               help='Path to the directory where code files are located. Defaults to current working directory.')
     parser_search.add_argument('query', type=str, help='Search query.')
     parser_search.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
     parser_search.add_argument('--files', action='store_true', help='Output entire file contents instead of just matching chunks.')
@@ -47,15 +49,15 @@ def parse_arguments():
     # Parse the command line arguments
     args = parser.parse_args()
 
-    # command and path are always mandatory
+    # command is always mandatory
     if args.command is None:
         parser.print_help()
         sys.exit(1)
+    # Ensure path_to_code is a valid directory
+    args.path_to_code = os.path.abspath(args.path_to_code)
     if not os.path.isdir(args.path_to_code):
         print(f"Error: The path {args.path_to_code} is not a directory.")
         sys.exit(1)
-    # strip off trailing slash, if present -- it confuses os.path.basename
-    args.path_to_code = args.path_to_code.rstrip('/')
     # collection name defaults to directory name
     if not args.collection:
         # Remove non-alphanumeric characters from the directory name since we're going to use this
@@ -66,7 +68,8 @@ def parse_arguments():
     if args.command == 'index':
         # Validate languages
         if args.languages:
-            validate_language(language)
+            for language in args.languages:
+                validate_language(language)
     else:
         assert args.command == 'search'
         if not args.query:
