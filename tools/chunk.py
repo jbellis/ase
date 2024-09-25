@@ -28,6 +28,8 @@ def main():
     
     print(f"File: {file_path} ({len(code)} characters in {language})")
     for i, chunk in enumerate(chunks):
+        if not chunk.strip():
+            raise ValueError(f"Empty chunk found at index {i}")
         print(f"Chunk {i + 1}:")
         print(chunk)
         print('-' * 80)
