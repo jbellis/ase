@@ -144,7 +144,7 @@ def index(args):
     # encode and store the interesting files
     print(f'Indexing {len(paths_to_index)} files ({n_unchanged} unchanged)')
     with tqdm(paths_to_index, 
-              bar_format='{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt}',
+              bar_format='{desc} {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt}',
               unit="file") as pbar:
         for full_path in pbar:
             file_doc = known_files_by_path.get(full_path)
@@ -157,8 +157,10 @@ def index(args):
             encoded_chunks = encode(chunks)
             db.insert(file_id, full_path, chunks, encoded_chunks)
             
-            # Update the description with the current filename
-            pbar.set_description(f"Indexing {os.path.basename(full_path)}")
+            # Update the description with the current filename, fixed to 40 characters
+            filename = os.path.basename(full_path)
+            desc = f"Indexing {filename[:37]}..." if len(filename) > 37 else f"Indexing {filename:<40}"
+            pbar.set_description(desc)
 
 
 from collections import defaultdict
