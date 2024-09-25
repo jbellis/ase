@@ -128,7 +128,7 @@ def index(args):
     
     # Prune list to changed or new files
     paths_to_index = []
-    for full_path in tqdm(all_paths, desc="Checking file changes", unit="file"):
+    for full_path in all_paths:
         file_doc = known_files_by_path.get(full_path)
         if file_doc:
             if hexdigest(full_path) == file_doc['hash']:
@@ -142,9 +142,10 @@ def index(args):
         print('No new or changed files to index')
         return
     # encode and store the interesting files
-    print(f'Indexing {len(paths_to_index)} files ({n_unchanged} unchanged)')
+    if n_unchanged:
+        print(f'{n_unchanged} files unchanged')
     with tqdm(paths_to_index, 
-              bar_format='{desc} {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt}',
+              bar_format='{desc} {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]',
               unit="file") as pbar:
         for full_path in pbar:
             file_doc = known_files_by_path.get(full_path)
