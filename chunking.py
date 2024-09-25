@@ -13,21 +13,15 @@ def chunkify_code(code: str, language: str) -> List[str]:
 
     chunks = []
     for node in tree.root_node.children:
-        if node.type in ("function_definition", "method_definition"):
+        if node.type in ("function_definition", "method_definition", "function_declaration", "method_declaration"):
             chunks.append(code[node.start_byte:node.end_byte])
-        elif node.type == "class_definition":
+        elif node.type in ("class_definition", "class_declaration"):
             class_chunk = code[node.start_byte:node.end_byte]
-            class_lines = class_chunk.split('\n')
-            
-            # Find the end of class declaration and fields
-            end_of_fields = next((i for i, line in enumerate(class_lines) if "def " in line), len(class_lines))
-            
-            # Add class declaration and fields as one chunk
-            chunks.append('\n'.join(class_lines[:end_of_fields]))
+            chunks.append(class_chunk)
             
             # Add methods as separate chunks
-            for method_node in node.children:
-                if method_node.type == "method_definition":
-                    chunks.append(code[method_node.start_byte:method_node.end_byte])
+            for child in node.children:
+                if child.type in ("method_definition", "method_declaration", "function_definition", "function_declaration"):
+                    chunks.append(code[child.start_byte:child.end_byte])
 
     return chunks
