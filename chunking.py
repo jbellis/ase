@@ -1,6 +1,5 @@
 from typing import List
 import warnings
-
 warnings.simplefilter("ignore", category=FutureWarning)
 from tree_sitter_languages import get_parser
 
@@ -20,7 +19,7 @@ def chunkify_code(code: str, language: str) -> List[str]:
         if node.type.endswith("_definition"):
             return True
         if node.type in ("function_declaration", "method_declaration", "constructor_declaration"):
-            # Check if the node has a body (compound_statement)
+            # Check if the node has a body (block)
             return any(child.type == "block" for child in node.children)
         return False
 
@@ -44,8 +43,7 @@ def chunkify_code(code: str, language: str) -> List[str]:
             # Continue traversing to handle nested classes and methods
             for child in node.children:
                 traverse(child)
-        elif node.type in ("function_definition", "method_definition", "function_declaration", "method_declaration",
-                           "constructor_declaration"):
+        elif node.type in ("function_definition", "method_definition", "function_declaration", "method_declaration", "constructor_declaration"):
             if is_definition(node):
                 method_chunk = code[byte_to_char_offset(node.start_byte):byte_to_char_offset(node.end_byte)]
                 chunks.append(method_chunk)
