@@ -12,6 +12,13 @@ def chunkify_code(code: str, language: str) -> List[str]:
 
     chunks = []
     
+    def is_definition(node):
+        """Check if a node represents a definition rather than just a declaration."""
+        return (
+            node.type.endswith("_definition") or
+            any(child.type == "compound_statement" for child in node.children)
+        )
+    
     def traverse(node):
         if node.type in ("class_declaration", "interface_declaration", "enum_declaration"):
             # For classes, interfaces, and enums, we'll chunk their contents separately
@@ -20,9 +27,9 @@ def chunkify_code(code: str, language: str) -> List[str]:
             for child in node.children:
                 traverse(child)
         elif node.type in ("function_definition", "method_definition", "function_declaration", "method_declaration", "constructor_declaration"):
-            # TODO for C-like languages we only want to capture definitions, not declarations
-            method_chunk = code[node.start_byte:node.end_byte]
-            chunks.append(method_chunk)
+            if is_definition(node):
+                method_chunk = code[node.start_byte:node.end_byte]
+                chunks.append(method_chunk)
         else:
             # For other node types, continue traversing
             for child in node.children:
