@@ -116,19 +116,23 @@ def index(args):
 def search(args):
     from encoder import encode
     encoded_query = encode(args.query)
-    result_sorted = sorted(db.search(encoded_query), key=itemgetter('file_id'))
-    results_by_file = sorted(((key, [item['chunk'] for item in group])
-                             for key, group in groupby(result_sorted, key=itemgetter('file_id'))),
-                             key=lambda kv: -len(kv[1]))
+    results = db.search(encoded_query, limit=args.limit)
+    
     if args.files:
+        result_sorted = sorted(db.search(encoded_query), key=itemgetter('file_id'))
+        results_by_file = sorted(((key, [item['chunk'] for item in group])
+                                  for key, group in groupby(result_sorted, key=itemgetter('file_id'))),
+                                 key=lambda kv: -len(kv[1]))
         for file_id, _ in results_by_file:
-            print('# {full_path} #')
-            print(open(file_id, 'r', encoding='utf-8').read())
+            full_path = db.file_by_id(file_id)['path']
+            print(full_path)
     else:
-        for file_id, chunks in results_by_file:
+        for result in results:
+            file_id = result['file_id']
             full_path = db.file_by_id(file_id)['path']
             print(f"# {full_path} #")
-            print('\n...\n'.join(chunks))
+            print(result['chunk'])
+            print("\n" + "-" * 80 + "\n")  # Separator between chunks
 
 
 if __name__ == '__main__':
