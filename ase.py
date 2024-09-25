@@ -159,7 +159,7 @@ from collections import defaultdict
 
 def search(args):
     from encoder import encode
-    encoded_query = encode(args.query)
+    encoded_query = encode([args.query])[0]
     results = db.search(encoded_query, args.max_count)
     
     if args.files_with_matches:
