@@ -61,9 +61,16 @@ def parse_arguments():
 
     # Create the parser for the "debug-index" command
     parser_debug_index = subparsers.add_parser('debug-index', help='List all indexed files with their hexdigest.')
+    parser_debug_index.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
     parser_debug_index.add_argument('path_to_code', type=str, nargs='?', default=os.getcwd(),
                                     help='Path to the directory where code files are located. Defaults to current working directory.')
-    parser_debug_index.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
+
+    # Create the parser for the "prune" command
+    parser_prune = subparsers.add_parser('prune', help='Delete specified file(s) from the index.')
+    parser_prune.add_argument('files', nargs='+', help='File(s) to delete from the index.')
+    parser_prune.add_argument('path_to_code', type=str, nargs='?', default=os.getcwd(),
+                              help='Path to the directory where code files are located. Defaults to current working directory.')
+    parser_prune.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
 
     # Parse the command line arguments
     args = parser.parse_args()
@@ -90,7 +97,6 @@ def parse_arguments():
             for language in args.languages:
                 validate_language(language)
     else:
-        assert args.command in ['search', 'debug-index']
         if args.command == 'search' and not args.query:
             print(f"Error: The search query cannot be empty.")
             sys.exit(1)
@@ -171,6 +177,21 @@ def search(args):
             print("\n" + "-" * 80 + "\n")  # Separator between chunks
 
 
+def prune(args):
+    # Create a dictionary mapping file paths to their document IDs
+    file_docs = {}
+    for doc in tqdm(db.hashes_cursor(), desc="Loading known files from Astra", bar_format='{desc}: {n_fmt}'):
+        file_docs[doc['path']] = doc['_id']
+    
+    for file_path in args.files:
+        full_path = os.path.abspath(file_path)
+        if full_path in file_docs:
+            db.delete(file_docs[full_path])
+            print(f"Deleted {file_path} from the index.")
+        else:
+            print(f"File {file_path} not found in the index.")
+
+
 if __name__ == '__main__':
     args = parse_arguments()
     db.init(args.collection)
@@ -178,6 +199,8 @@ if __name__ == '__main__':
         index(args)
     elif args.command == 'search':
         search(args)
+    elif args.command == 'prune':
+        prune(args)
     else:
         assert args.command == 'debug-index'
         debug_index(args)
