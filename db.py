@@ -19,7 +19,7 @@ def init(collection_name):
     """
     global _embeddings, _files
     print('Connecting to database for collection ' + collection_name)
-    # get_collections is very fast, so I haven't bothered to optimize this further
+    # get_collections is fast enough that I haven't bothered to optimize this further with local caching
     all_collections = set(_db.get_collections()['status']['collections'])
 
     embeddings_collection_name = collection_name + "_embeddings"
