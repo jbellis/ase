@@ -29,7 +29,9 @@ def main():
     print(f"File: {file_path} ({len(code)} characters in {language})")
     for i, chunk in enumerate(chunks):
         print(f"  Chunk {i + 1}:")
-        print(f"    {chunk[:100]}...")  # Display first 100 characters of the chunk
+        print(f"    {chunk[:100]}")
+        if len(chunk) > 100:
+            print(f"...{len(chunk) - 100} more")
     print()
 
 if __name__ == "__main__":
