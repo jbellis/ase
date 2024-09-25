@@ -43,8 +43,8 @@ def parse_arguments():
                                help='Path to the directory where code files are located. Defaults to current working directory.')
     parser_search.add_argument('query', type=str, help='Search query.')
     parser_search.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
-    parser_search.add_argument('--files', action='store_true', help='Output entire file contents instead of just matching chunks.')
-    parser_search.add_argument('--limit', type=int, help='Number of search results to include.')
+    parser_search.add_argument('-l', '--files-with-matches', action='store_true', help='Print only the names of files containing matches.')
+    parser_search.add_argument('-m', '--max-count', type=int, default=5, help='Return a maximum of NUM matches (default: 5)', metavar='NUM')
 
     # Parse the command line arguments
     args = parser.parse_args()
@@ -116,9 +116,9 @@ def index(args):
 def search(args):
     from encoder import encode
     encoded_query = encode(args.query)
-    results = db.search(encoded_query, limit=args.limit)
+    results = db.search(encoded_query, args.max_count)
     
-    if args.files:
+    if args.files_with_matches:
         result_sorted = sorted(db.search(encoded_query), key=itemgetter('file_id'))
         results_by_file = sorted(((key, [item['chunk'] for item in group])
                                   for key, group in groupby(result_sorted, key=itemgetter('file_id'))),

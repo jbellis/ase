@@ -69,7 +69,7 @@ def insert(file_id, full_path, chunks, encoded_chunks):
         _embeddings.insert_many(embeddings_docs[i:i + 20])
 
 
-def search(query_embedding, limit=10):
+def search(query_embedding, limit):
     """Return the top `limit` chunks that are most similar to the given query embedding."""
     return _embeddings.find(
         {},
