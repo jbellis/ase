@@ -59,6 +59,12 @@ def parse_arguments():
     parser_search.add_argument('-l', '--files-with-matches', action='store_true', help='Print only the names of files containing matches.')
     parser_search.add_argument('-m', '--max-count', type=int, default=5, help='Return a maximum of NUM matches (default: 5)', metavar='NUM')
 
+    # Create the parser for the "debug-index" command
+    parser_debug_index = subparsers.add_parser('debug-index', help='List all indexed files with their hexdigest.')
+    parser_debug_index.add_argument('path_to_code', type=str, nargs='?', default=os.getcwd(),
+                                    help='Path to the directory where code files are located. Defaults to current working directory.')
+    parser_debug_index.add_argument('--collection', type=str, help='Name of the collection to use. Defaults to directory name.')
+
     # Parse the command line arguments
     args = parser.parse_args()
 
@@ -84,12 +90,19 @@ def parse_arguments():
             for language in args.languages:
                 validate_language(language)
     else:
-        assert args.command == 'search'
-        if not args.query:
+        assert args.command in ['search', 'debug-index']
+        if args.command == 'search' and not args.query:
             print(f"Error: The search query cannot be empty.")
             sys.exit(1)
 
     return args
+
+
+def debug_index(args):
+    print(f"Listing indexed files for collection: {args.collection}")
+    for file_doc in db.hashes_cursor():
+        relative_path = relativize(file_doc['path'], args.path_to_code)
+        print(f"{relative_path}: {file_doc['hash']}")
 
 
 def index(args):
@@ -163,6 +176,8 @@ if __name__ == '__main__':
     db.init(args.collection)
     if args.command == 'index':
         index(args)
-    else:
-        assert args.command == 'search'
+    elif args.command == 'search':
         search(args)
+    else:
+        assert args.command == 'debug-index'
+        debug_index(args)
