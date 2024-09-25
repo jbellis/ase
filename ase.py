@@ -93,11 +93,11 @@ def parse_arguments():
 
 
 def index(args):
-    known_files_by_path = {file_doc['path']: file_doc
-                           for file_doc in db.load_hashes()}
+    known_files_by_path = {}
+    for file_doc in tqdm(db.hashes_cursor(), desc="Loading known files from Astra", bar_format='{desc}: {n_fmt}'):
+        known_files_by_path[file_doc['path']] = file_doc
     n_unchanged = 0
 
-    print('Scanning for files to index')
     all_paths = get_indexable_files(args.path_to_code, args.languages)
     
     # Prune list to changed or new files
@@ -112,6 +112,9 @@ def index(args):
                 db.delete(file_doc['_id'])
         paths_to_index.append(full_path)
 
+    if not paths_to_index:
+        print('No new or changed files to index')
+        return
     # encode and store the interesting files
     print(f'Indexing {len(paths_to_index)} files ({n_unchanged} unchanged)')
     for full_path in tqdm(paths_to_index, desc="Indexing files", unit="file"):

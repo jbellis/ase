@@ -35,9 +35,9 @@ def init(collection_name):
         _files = _db.create_collection(files_collection_name)
 
 
-def load_hashes():
+def hashes_cursor():
     """Return all documents in the files collection."""
-    return list(_files.find({}))
+    return _files.find({})
 
 
 def file_by_id(file_id):
