@@ -1,8 +1,10 @@
 import warnings
 import os
+import sys
 from anthropic import Anthropic
 warnings.simplefilter("ignore", category=FutureWarning)
 from tree_sitter_languages import get_parser
+from util import infer_language
 
 # Initialize the Anthropic client
 client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
@@ -112,3 +114,26 @@ def get_chunk_context(full_code: str, chunk: str) -> str:
     )
 
     return response.content[0].text.strip()
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python chunking.py <filename>")
+        sys.exit(1)
+
+    filename = sys.argv[1]
+    try:
+        with open(filename, 'r') as file:
+            code = file.read()
+    except IOError:
+        print(f"Error: Unable to read file '{filename}'")
+        sys.exit(1)
+
+    language = infer_language(filename)
+    chunks = chunkify_code(code, language)
+
+    print(f"Chunks {filename} (inferred language: {language}):")
+    print("-" * 80)
+    for i, chunk in enumerate(chunks, 1):
+        print(f"Chunk {i}:")
+        print(chunk)
+        print("-" * 80)
