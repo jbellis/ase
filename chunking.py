@@ -1,10 +1,21 @@
-from typing import List
 import warnings
+import os
+from anthropic import Anthropic
 warnings.simplefilter("ignore", category=FutureWarning)
 from tree_sitter_languages import get_parser
 
+# Initialize the Anthropic client
+client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-def chunkify_code(code: str, language: str) -> List[str]:
+def chunkify_code(code: str, language: str) -> list[str]:
+    """
+    Extracts chunks from the code and adds context to each chunk using Claude Haiku.
+    """
+    return [get_chunk_context(code, raw_chunk) + '\n\n' + raw_chunk
+            for raw_chunk in extract_chunks(code, language)]
+
+
+def extract_chunks(code: str, language: str) -> list[str]:
     """
     Splits code into semantically meaningful chunks using tree-sitter.
     """
@@ -55,3 +66,49 @@ def chunkify_code(code: str, language: str) -> List[str]:
     traverse(tree.root_node)
 
     return chunks
+
+
+def get_chunk_context(full_code: str, chunk: str) -> str:
+    """
+    Uses Claude Haiku to generate context for a given code chunk.
+    """
+    DOCUMENT_CONTEXT_PROMPT = """
+    <document>
+    {doc_content}
+    </document>
+    """
+
+    CHUNK_CONTEXT_PROMPT = """
+    Here is the chunk we want to situate within the whole document
+    <chunk>
+    {chunk_content}
+    </chunk>
+
+    Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk.
+    Answer only with the succinct context and nothing else.
+    """
+
+    response = client.beta.prompt_caching.messages.create(
+        model="claude-3-haiku-20240307",
+        max_tokens=1024,
+        temperature=0.0,
+        messages=[
+            {
+                "role": "user", 
+                "content": [
+                    {
+                        "type": "text",
+                        "text": DOCUMENT_CONTEXT_PROMPT.format(doc_content=full_code),
+                        "cache_control": {"type": "ephemeral"}
+                    },
+                    {
+                        "type": "text",
+                        "text": CHUNK_CONTEXT_PROMPT.format(chunk_content=chunk),
+                    }
+                ]
+            }
+        ],
+        extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
+    )
+
+    return response.content[0].text.strip()
