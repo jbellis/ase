@@ -21,7 +21,7 @@ def relativize(full_path, base_path):
     Returns:
         str: The relative path.
     """
-    return str(Path(full_path).relative_to(base_path))
+    return str(Path(full_path).resolve().relative_to(base_path))
 
 def parse_arguments():
     """
