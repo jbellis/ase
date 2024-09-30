@@ -1,16 +1,16 @@
 import os
 
 import requests
-from ratelimit import limits, sleep_and_retry
-
+from pyrate_limiter import Duration, RequestRate, Limiter
 
 JINA_API_KEY = os.environ.get("JINA_API_KEY")
 if not JINA_API_KEY:
     raise Exception('JINA_API_KEY environment variable not set')
 
+# Create a limiter with a rate of 59 requests per 60 seconds
+limiter = Limiter(RequestRate(59, Duration.MINUTE))
 
-@sleep_and_retry
-@limits(calls=59, period=60)
+@limiter.ratelimit('encode', delay=True)
 def encode(inputs: list[str]) -> list[list[float]]:
     # by experiment this seems to be the approximate upper limit
     # (TODO: use an actual tokenizer instead: the limit for "normal" tokens is around 20k,
