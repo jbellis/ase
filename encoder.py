@@ -12,8 +12,10 @@ if not JINA_API_KEY:
 @sleep_and_retry
 @limits(calls=59, period=60)
 def encode(inputs: list[str]) -> list[list[float]]:
-    print('Encoding', len(inputs), 'inputs')
-    limited_inputs = [text[:30000] for text in inputs] # 8k tokens * 0.9 words/token * 4.7 bytes/word, conservatively
+    # by experiment this seems to be the approximate upper limit
+    # (TODO: use an actual tokenizer instead: the limit for "normal" tokens is around 20k,
+    # but we have to use a lower amount because of pathological cases like Cassandra's StandardTokenizerImpl)
+    limited_inputs = [text[:10000] for text in inputs]
     url = 'https://api.jina.ai/v1/embeddings'
     headers = {
         "Content-Type": "application/json",
