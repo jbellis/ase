@@ -17,9 +17,15 @@ def chunkify_code(code: str, language: str) -> list[str]:
     """
     Extracts chunks from the code and adds context to each chunk using Claude Haiku.
     """
-    return [get_chunk_context(code, raw_chunk) + '\n\n' + raw_chunk
-            for raw_chunk in extract_chunks(code, language)]
+    return [contextify(raw_chunk, code) for raw_chunk in extract_chunks(code, language)]
 
+def contextify(chunk: str, full_code: str) -> str:
+    if os.environ.get("ASE_CONTEXT") == "contextual":
+        return get_chunk_context(full_code, chunk) + '\n\n' + chunk
+    if os.environ.get("ASE_CONTEXT") == "semantic":
+        # TODO
+        return extract_class_header(code) + '\n\n' + chunk
+    return chunk
 
 def extract_chunks(code: str, language: str) -> list[str]:
     """
