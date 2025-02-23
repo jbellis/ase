@@ -5,9 +5,13 @@ from anthropic import Anthropic
 warnings.simplefilter("ignore", category=FutureWarning)
 from tree_sitter_languages import get_parser
 from util import infer_language
+from pyrate_limiter import Duration, Rate, Limiter
 
 # Initialize the Anthropic client
 client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+
+# Initialize the rate limiter
+limiter = Limiter(Rate(900, Duration.MINUTE))
 
 def chunkify_code(code: str, language: str) -> list[str]:
     """
@@ -73,6 +77,7 @@ def extract_chunks(code: str, language: str) -> list[str]:
 def get_chunk_context(full_code: str, chunk: str) -> str:
     """
     Uses Claude Haiku to generate context for a given code chunk.
+    Rate limited to 1000 requests per minute.
     """
     DOCUMENT_CONTEXT_PROMPT = """
     <document>
@@ -89,7 +94,7 @@ def get_chunk_context(full_code: str, chunk: str) -> str:
     Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk.
     Answer only with the succinct context and nothing else.
     """
-
+    limiter.try_acquire('get_chunk_context', 1)
     response = client.beta.prompt_caching.messages.create(
         model="claude-3-haiku-20240307",
         max_tokens=1024,
